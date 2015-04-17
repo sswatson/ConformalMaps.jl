@@ -37,5 +37,5 @@ domain = Complex{Float64}[invconformalmap(zeta,r*exp(im*theta),center)
 showgraphics([plotgrid(domain),Line(closepath(mypoints))])
 ```
 
-![Conformal map](https://github.com/sswatson/ConformalMaps.jl/images/square.png)
+![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
 
