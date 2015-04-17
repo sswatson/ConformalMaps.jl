@@ -16,10 +16,11 @@ equally spaced points along each side of the polygon. Higher values of `n`
 give greater accuracy but require longer to compute. 
 
 ```julia
-zeta = initialize_conformal_map([1.0  0.0;
-	                             0.0  1.0;
-							    -1.0 0.0;
-								 0.0 -1.0];resolution=100)
+vertices = [1.0  0.0;
+	        0.0  1.0;
+			-1.0 0.0;
+			0.0 -1.0]
+zeta = initialize_conformal_map(vertices;resolution=100)
 ```
 
 Once `zeta` has been computed, a conformal map from the domain to the disk
@@ -34,7 +35,7 @@ level lines under the inverse conformal map.
 ```julia
 domain = Complex{Float64}[invconformalmap(zeta,r*exp(im*theta),center) 
                  for r=linspace(0,0.99999,100),theta=linspace(0,2*pi,100)]
-showgraphics([plotgrid(domain),Line(closepath(mypoints))])
+showgraphics([plotgrid(domain),Line(closepath(vertices))])
 ```
 
 ![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
