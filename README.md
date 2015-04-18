@@ -33,10 +33,10 @@ level lines under the inverse conformal map.
 ```julia
 center = 0.0
 domain = Complex{Float64}[invconformalmap(ζ,r*exp(im*θ),center) 
-                 for r = linspace(0,0.99999,100), θ=linspace(0,2π,100)]
+                 for r = linspace(0.05,0.99999,20).^(2/3), θ=linspace(0,2π,50)]
 showgraphics([plotgrid(domain),Line(closepath(vertices))])
 ```
 
-![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
+![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/conformalmap.png)
 
 [![Build Status](https://travis-ci.org/sswatson/ConformalMaps.jl.svg?branch=master)](https://travis-ci.org/sswatson/ConformalMaps.jl)
