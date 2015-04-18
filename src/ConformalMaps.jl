@@ -143,11 +143,11 @@ function densify{T<:FloatingPoint}(A::Array{T,2},n::Integer)
     return densearray
 end
 
-function initialize_conformal_map(points::Array{Float64,2};resolution=1)
+function initialize_conformal_map{T<:FloatingPoint}(points::Array{T,2};resolution=1)
     densepoints = densify(points,resolution)
     complexpoints = densepoints[:,1] + im*densepoints[:,2];
     
-    ζ = Complex{Float64}[]
+    ζ = Complex{typeof(points[1,1])}[]
 
     for k=3:length(complexpoints)
         push!(ζ,fcompose(ζ,phi2(complexpoints[k],complexpoints[1],complexpoints[2])))
@@ -161,18 +161,26 @@ function initialize_conformal_map(points::Array{Float64,2};resolution=1)
     return ζ
 end
 
-function conformalmap{T<:FloatingPoint}(ζ::Array{Complex{Float64},1},
+function initialize_conformal_map{T<:Real}(points::Array{T,2};args...)
+    return initialize_conformal_map(float(points);args...)
+end
+
+function initialize_conformal_map{T<:Real}(points::Array{Complex{T},1};args...) 
+    return initialize_conformal_map(hcat(real(points),imag(points));args...)
+end
+
+function conformalmap{T<:FloatingPoint}(ζ::Array{Complex{T},1},
                                         z::Union(T,Complex{T}),
                                         center::Union(T,Complex{T}))
     a = philast(fcompose(ζ[1:end-3],phi2(center,ζ[end-1],ζ[end])),ζ[end-2])
     return (x->(x-a)/(x-conj(a)))(philast(fcompose(ζ[1:end-1],phi2(z,ζ[end-1],ζ[end])),ζ[end]))
 end
 
-conformalmap{T<:FloatingPoint}(ζ::Array{Complex{Float64},1},
+conformalmap{T<:FloatingPoint}(ζ::Array{Complex{T},1},
                                p::(T,T),
                                a::Union(T,Complex{T})) = conformalmap(ζ,p[1] + im*p[2],a)
 
-function invconformalmap(ζ::Array{Complex{Float64},1},
+function invconformalmap{T<:FloatingPoint}(ζ::Array{Complex{T},1},
                          w::Union(Complex,FloatingPoint),
                          center::Union(Complex,FloatingPoint))
     a = philast(fcompose(ζ[1:end-3],phi2(center,ζ[end-1],ζ[end])),ζ[end-2])
@@ -185,8 +193,12 @@ end
 # FUNCTIONS FOR DISPLAY SUPPORT  
 #-----------------------------------------------------------------------------
 
-function closepath{T<:FloatingPoint}(A::Array{Complex{T},1})
-    return closepath(hcat([real(a) for a in A], [imag(a) for a in A]))
+function closepath{T<:FloatingPoint}(γ::Array{Complex{T},1})
+    return closepath(hcat([real(a) for a in γ], [imag(a) for a in γ]))
+end
+
+function closepath{T<:Real}(γ::Array{Complex{T},1})
+    return closepath(float(γ))
 end
 
 function closepath{T<:FloatingPoint}(γ::Array{T,2})
@@ -197,13 +209,17 @@ function closepath{T<:FloatingPoint}(γ::Array{T,2})
     end
 end
 
-function plotgrid(zvals)
+function closepath{T<:Real}(γ::Array{T,2})
+    return closepath(float(γ))
+end
+
+function plotgrid(zvals;color1=Graphics2D.blue,color2=Graphics2D.red,args...)
     lines = Graphics2D.Line[]
     for i=1:size(zvals)[1]
-        push!(lines,Graphics2D.Line(hcat(real(zvals[i,:])',imag(zvals[i,:])')))
+        push!(lines,Graphics2D.Line(hcat(real(zvals[i,:])',imag(zvals[i,:])');color=color1,args...))
     end
     for j=1:size(zvals)[2]
-        push!(lines,Graphics2D.Line(hcat(real(zvals[:,j]),imag(zvals[:,j]))))
+        push!(lines,Graphics2D.Line(hcat(real(zvals[:,j]),imag(zvals[:,j]));color=color2,args...))
     end
     return lines
 end
