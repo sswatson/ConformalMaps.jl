@@ -9,7 +9,7 @@ by Don Marshall and Steffen Rohde.
 The domain (approximated by a polygon) is specified as an array which lists
 the vertices of the domain in counterclockwise order. A conformal map is
 encoded by an array `ζ` which can be computed with
-`initialize_conformal_map`. The keyword argument `resolution=n` inserts `n`
+`initializeconformalmap`. The keyword argument `resolution=n` inserts `n`
 equally spaced points along each side of the polygon. Higher values of `n`
 give greater accuracy but require longer to compute. 
 
@@ -18,7 +18,7 @@ vertices = [1.0  0.0;
 	        0.0  1.0;
 			-1.0 0.0;
 			0.0 -1.0]
-ζ = initialize_conformal_map(vertices;resolution=100)
+ζ = initializeconformalmap(vertices;resolution=100)
 ```
 
 Once `ζ` has been computed, a conformal map from the domain to the disk
@@ -27,16 +27,15 @@ mapping `center` to the origin can be computed with
 `z->invconformalmap(ζ,z,center)`.
 
 If [`Graphics2D`](https://github.com/sswatson/Graphics2D.jl) is installed,
-then `plotgrid` may be used to display the images of the polar coordinate
-level lines under the inverse conformal map. 
+then `hyperbolictiling` may be used to display the images of certain polar
+coordinate level lines under the inverse conformal map. 
 
 ```julia
 center = 0.0
-domain = Complex{Float64}[invconformalmap(ζ,r*exp(im*θ),center) 
-                 for r = linspace(0.05,0.99999,20).^(2/3), θ=linspace(0,2π,50)]
-showgraphics([plotgrid(domain),Line(closepath(vertices))])
+f(z) = invconformalmap(ζ,z,center)
+showgraphics([Line(closepath(vertices)),hyperbolictiling(f;rays=24,rings=12,innerradius=0.2)])
 ```
 
-![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/conformalmap.png)
+![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
 
 [![Build Status](https://travis-ci.org/sswatson/ConformalMaps.jl.svg?branch=master)](https://travis-ci.org/sswatson/ConformalMaps.jl)
