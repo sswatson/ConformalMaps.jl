@@ -27,11 +27,12 @@ module ConformalMaps
 
 import Graphics2D
 
-export initialize_conformal_map,
+export initializeconformalmap,
        conformalmap,
        invconformalmap,
        plotgrid, 
-       closepath
+       closepath,
+       hyperbolictiling
 
 
 #-----------------------------------------------------------------------------
@@ -143,7 +144,7 @@ function densify{T<:FloatingPoint}(A::Array{T,2},n::Integer)
     return densearray
 end
 
-function initialize_conformal_map{T<:FloatingPoint}(points::Array{T,2};resolution=1)
+function initializeconformalmap{T<:FloatingPoint}(points::Array{T,2};resolution=1)
     densepoints = densify(points,resolution)
     complexpoints = densepoints[:,1] + im*densepoints[:,2];
     
@@ -161,12 +162,12 @@ function initialize_conformal_map{T<:FloatingPoint}(points::Array{T,2};resolutio
     return ζ
 end
 
-function initialize_conformal_map{T<:Real}(points::Array{T,2};args...)
-    return initialize_conformal_map(float(points);args...)
+function initializeconformalmap{T<:Real}(points::Array{T,2};args...)
+    return initializeconformalmap(float(points);args...)
 end
 
-function initialize_conformal_map{T<:Real}(points::Array{Complex{T},1};args...) 
-    return initialize_conformal_map(hcat(real(points),imag(points));args...)
+function initializeconformalmap{T<:Real}(points::Array{Complex{T},1};args...) 
+    return initializeconformalmap(hcat(real(points),imag(points));args...)
 end
 
 function conformalmap{T<:FloatingPoint}(ζ::Array{Complex{T},1},
@@ -222,6 +223,26 @@ function plotgrid(zvals;color1=Graphics2D.blue,color2=Graphics2D.red,args...)
         push!(lines,Graphics2D.Line(hcat(real(zvals[:,j]),imag(zvals[:,j]));color=color2,args...))
     end
     return lines
+end
+
+function hyperbolictiling(f::Function;
+                           rings::Integer=8,
+                           rays::Integer=2,
+                           rotation::Real=0.0,
+                           innerradius::Real=0.5,
+                           ringcolor::Array{Float64,1}=Graphics2D.blue,
+                           raycolor::Array{Float64,1}=Graphics2D.red)
+    points = Array{Complex64,1}[[f((1-(1-innerradius)/2^(k-1))*cos(θ+rotation) + 
+            im*(1-(1-innerradius)/2^(k-1))*sin(θ+rotation)) 
+            for θ=linspace(0,2π,1+rays*2^(k-1))] for k=1:rings]
+    return [vcat([[Graphics2D.Line([points[i][k],points[i][k+1]];
+                color=ringcolor,linesize=1-i/(rings+4)) 
+            for k=1:length(points[i])-1] 
+            for i=1:length(points)]...),
+            vcat([[Graphics2D.Line([points[i][k],points[i+1][2*k-1]];
+                color=raycolor,linesize=1-i/(rings+4)) 
+            for k=1:length(points[i])-1] 
+            for i=1:length(points)-1]...)]
 end
 
 
