@@ -7,33 +7,34 @@ described in
 by Don Marshall and Steffen Rohde.
 
 The domain (approximated by a polygon) is specified as an array which lists
-the vertices of the domain in counterclockwise order. A conformal map is
-encoded by an array `ζ` which can be computed with
-`initializeconformalmap`. The keyword argument `resolution=n` inserts `n`
-equally spaced points along each side of the polygon. Higher values of `n`
-give greater accuracy but require longer to compute. 
+the vertices of the domain in counterclockwise order. A conformal
+map from `domain` to the unit disk which maps `center` to the origin
+is initialized as `ConformalMap(domain,center)`. The keyword argument
+`resolution=n` inserts `n` equally spaced points along each side of
+the polygon. Higher values of `n` give greater accuracy but require
+longer to compute. 
 
 ```julia
 vertices = [1.0  0.0;
 	        0.0  1.0;
 			-1.0 0.0;
 			0.0 -1.0]
-ζ = initializeconformalmap(vertices;resolution=100)
+f = ConformalMap(vertices,0.0;resolution=100)
 ```
 
-Once `ζ` has been computed, a conformal map from the domain to the disk
-mapping `center` to the origin can be computed with
-`z->conformalmap(ζ,z,center)`. The inverse of this map can be computed with
-`z->invconformalmap(ζ,z,center)`.
+`f` supports function call syntax: `f(0.1im)`
+
+The inverse of `f` is obtained as `inv(g)` and is of type
+`InverseConformalMap`. 
 
 If [`Graphics2D`](https://github.com/sswatson/Graphics2D.jl) is installed,
-then `hyperbolictiling` may be used to display the images of certain polar
-coordinate level lines under the inverse conformal map. 
+then `visualize` may be used to display the images of certain polar
+coordinate level lines under the inverse conformal map (if called on
+an `InverseConformalMap`) or grid lines (if called on a `ConformalMap`). 
 
 ```julia
-center = 0.0
-f(z) = invconformalmap(ζ,z,center)
-showgraphics([Line(closepath(vertices)),hyperbolictiling(f;rays=24,rings=12,innerradius=0.2)])
+g = inv(f)
+showgraphics([visualize(g;rays=24,rings=12,innerradius=0.2)[2];domain(f)])
 ```
 
 ![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
