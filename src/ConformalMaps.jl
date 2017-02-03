@@ -29,7 +29,6 @@ module ConformalMaps
 
 
 import Graphics2D,
-       Base.call,
        Base.show,
        Base.inv,
        Base.intersect
@@ -107,13 +106,13 @@ function inv(ICM::InverseConformalMap)
     return ConformalMap(ICM.domain,ICM.data,ICM.center)
 end
 
-function Base.call(CM::ConformalMap,z::Union{Real,Complex})
+function (CM::ConformalMap)(z::Union{Real,Complex})
     ζ = CM.data
     return H_to_D((philast(fcompose(ζ[1:end-4],
                                     phi2(z,ζ[end-2],ζ[end-1])),ζ[end-3])),ζ[end])
 end
 
-function Base.call(ICM::InverseConformalMap,z::Union{Real,Complex})
+function (ICM::InverseConformalMap)(z::Union{Real,Complex})
     ζ = ICM.data
     return phi2inv(finvcompose(ζ[1:end-4],
                                philastinv(D_to_H(z,ζ[end]),ζ[end-3])),ζ[end-2],ζ[end-1])
@@ -351,10 +350,10 @@ function fzipinv(a::Complex,w::Union{Real,Complex};args...)
         u = v^(1/p)
         return newton(z->kofzip(z)-u,kof_prime,p+u;args...)
     else 
-        kofzip(z) = exp(-im*p/(1-p)*π)*(z-p)^(p/(1-p))*(z-(p-1))
-        kof_prime(z) = exp(-im*p/(1-p)*π)*(p/(1-p)*(z-p)^(p/(1-p)-1)*(z-(p-1)) + (z-p)^(p/(1-p)))
+        kofzip2(z) = exp(-im*p/(1-p)*π)*(z-p)^(p/(1-p))*(z-(p-1))
+        kof_prime2(z) = exp(-im*p/(1-p)*π)*(p/(1-p)*(z-p)^(p/(1-p)-1)*(z-(p-1)) + (z-p)^(p/(1-p)))
         u = exp(-im*p/(1-p)*π)*v^(1/(1-p))
-        return newton(z->kofzip(z)-u,kof_prime,p-1+u;args...)        
+        return newton(z->kofzip2(z)-u,kof_prime2,p-1+u;args...)
     end
 end
 
@@ -440,7 +439,7 @@ function closepath{T<:AbstractFloat}(γ::Array{T,2})
     if γ[end,:] == γ[1,:]
         return γ
     else
-        return vcat(γ,γ[1,:])
+        return vcat(γ,γ[1,:]')
     end
 end
 
@@ -448,7 +447,7 @@ function closepath{T<:Real}(γ::Array{T,2})
     return closepath(float(γ))
 end
 
-function plotgrid(zvals;color1=Graphics2D.blue,color2=Graphics2D.red,args...)
+function plotgrid(zvals;color1="blue",color2="red",args...)
     lines = Graphics2D.Line[]
     for i=1:size(zvals)[1]
         push!(lines,Graphics2D.Line(hcat(real(zvals[i,:])',imag(zvals[i,:])');color=color1,args...))
@@ -464,17 +463,17 @@ function hyperbolictiling(f::Function;
                           rays::Integer=16,
                           rotation::Real=0.0,
                           innerradius::Real=1.0/3.0,
-                          ringcolor::Array{Float64,1}=Graphics2D.blue,
-                          raycolor::Array{Float64,1}=Graphics2D.red)
+                          ringcolor="blue",
+                          raycolor="red")
     points = Array{Complex64,1}[[f((1-(1-innerradius)/2^(k-1))*cos(θ+rotation) + 
                                    im*(1-(1-innerradius)/2^(k-1))*sin(θ+rotation)) 
                                  for θ=linspace(0,2π,1+rays*2^(k-1))] for k=1:rings]
     return [vcat([[Graphics2D.Line([points[i][k],points[i][k+1]];
-                color=ringcolor,linesize=1-i/(rings+4)) 
+                color=ringcolor,linewidth=1-i/(rings+4)) 
             for k=1:length(points[i])-1] 
             for i=1:length(points)]...);
             vcat([[Graphics2D.Line([points[i][k],points[i+1][2*k-1]];
-                color=raycolor,linesize=1-i/(rings+4)) 
+                color=raycolor,linewidth=1-i/(rings+4)) 
             for k=1:length(points[i])-1] 
             for i=1:length(points)-1]...)]
 end
@@ -610,13 +609,13 @@ function showgrid(domain,totalgrid,pointsinside,lines,center)
     return [[Graphics2D.Point(real(center),imag(center)),
     Graphics2D.Line(closepath(domain))];
     [Graphics2D.Line([totalgrid[line[1]...],
-    totalgrid[line[2]...]],linesize=0.2) for line in lines]] 
+    totalgrid[line[2]...]],linewidth=0.2) for line in lines]] 
 end
 
 function showgridimage(f,totalgrid,pointsinside,lines,center)
     return [[Graphics2D.Point(0.0,0.0),Graphics2D.Circle([0.0,0.0],1)];
      [Graphics2D.Line([f(totalgrid[line[1]...]),
-                       f(totalgrid[line[2]...])],linesize=0.1) for line in lines]] 
+                       f(totalgrid[line[2]...])],linewidth=0.1) for line in lines]] 
 end
 
 function visualize(CM::ConformalMap,n::Integer=40)
