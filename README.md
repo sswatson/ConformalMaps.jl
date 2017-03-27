@@ -15,10 +15,12 @@ the polygon. Higher values of `n` give greater accuracy but require
 longer to compute. 
 
 ```julia
+using Graphics2D
+using ConformalMaps
 vertices = [1.0  0.0;
-	        0.0  1.0;
-			-1.0 0.0;
-			0.0 -1.0]
+            0.0  1.0;
+           -1.0  0.0;
+            0.0 -1.0]
 f = ConformalMap(vertices,0.0;resolution=100)
 ```
 
