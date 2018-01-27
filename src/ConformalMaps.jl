@@ -5,7 +5,8 @@ module ConformalMaps
 # boundary to a disk or half-plane. 
 
 # The algorithm used is based on the paper Convergence of the Zipper algorithm 
-# for conformal mapping by Don Marshall and Steffen Rohde. 
+# for conformal mapping by Don Marshall and Steffen Rohde. The function names
+# in this module are modeled after the notation in the paper. 
 # http://arxiv.org/abs/math/0605532
 
 #-----------------------------------------------------------------------------
@@ -15,34 +16,24 @@ module ConformalMaps
 ## Computing the list of points ζ can take a long time for a complicated domain
 # f = ConformalMap(Float64[1 0; 0 1; -1 0; 0 -1];resolution=100)
 
-## ConformalMap types support function call notation
+## ConformalMap objects support function call notation
 # f(0.6+0.7im)
 
 ## The inverse of a ConformalMap is an InverseConformalMap
 # g = inv(f)
 
-## visualize(g::InverseConformalMap) outputs two graphics, the second
-## of which shows the images under g of a hyperbolic tiling of the disk. 
-# showgraphics(visualize(g;rays=16,rings=12)[2])
-
 #-----------------------------------------------------------------------------
 
-
-import Graphics2D,
+import Requires, 
        Base.show,
-       Base.inv,
-       Base.intersect
+       Base.inv
 
 export ConformalMap,
-       closepath,
-       D_to_H,
-       H_to_D,
-       hyperbolictiling,
-       visualize,
+       InverseConformalMap, 
        domain
-
+    
 #-----------------------------------------------------------------------------
-# CONFORMAL MAP IMMUTABLE TYPE
+# Conformal Map Types
 #-----------------------------------------------------------------------------
 
 immutable ConformalMap{T<:Real} # A map from the domain to the disk
@@ -57,13 +48,15 @@ immutable InverseConformalMap{T<:Real} # A map from the disk to the domain
     center::Complex{T} 
 end
 
-function ConformalMap{T<:Real}(domain::Array{Complex{T},1},
-                               center::Complex{T};
-                               resolution::Integer=1)
+function ConformalMap(domain::Array{<:Complex,1},
+                      center::Complex;
+                      resolution::Integer=1)
 
     densepoints = densify(domain,resolution)
 
-    ζ = Complex{typeof(real(domain[1]))}[]
+    T = float(real(eltype(densepoints)))
+
+    ζ = Complex{T}[]
 
     for k=3:length(densepoints)
         push!(ζ,fcompose(ζ,phi2(densepoints[k],
@@ -77,20 +70,26 @@ function ConformalMap{T<:Real}(domain::Array{Complex{T},1},
 
     push!(ζ,philast(fcompose(ζ[1:end-3],phi2(center,ζ[end-1],ζ[end])),ζ[end-2]))
 
-    return ConformalMap(densepoints,ζ,center)
-
+    return ConformalMap(densepoints,ζ,convert(Complex{T},center))
 end
 
-function ConformalMap{T<:Real}(domain::Array{Complex{T},1},
-                       center::T;
-                       kwargs...)
+function ConformalMap(domain::Array{<:Complex,1},
+                      center::Real;
+                      kwargs...)
     return ConformalMap(domain,complex(center);kwargs...)
 end
 
-function ConformalMap{T<:Real}(domain::Array{T,2},
-                               center::T;
-                               kwargs...)
-    return ConformalMap(domain[:,1] + im*domain[:,2],center;kwargs...)
+function ConformalMap(domain::Array{<:Real,2},
+                      center::Union{Real,Complex};
+                      kwargs...)
+    return ConformalMap(domain[:,1] + im*domain[:,2],complex(center);kwargs...)
+end
+
+function ConformalMap(domain::Array{Tuple{<:Real,<:Real},1},
+                      center::Union{Real,Complex};
+                      kwargs...)
+    complexdomain = [a for (a,b) in domain] + im*[b for (a,b) in domain]
+    return ConformalMap(complexdomain,center;kwargs...) 
 end
 
 function InverseConformalMap{T<:Real}(domain::Array{Complex{T},1},
@@ -138,7 +137,9 @@ function shortformat(z::Complex)
     elseif real(z) == 0
         return string(shortformat(imag(z)),"im")
     else
-        return string(shortformat(real(z)), "+", shortformat(imag(z)),"im")
+        return string(shortformat(real(z)),
+                      signbit(imag(z)) ? "-" : "+",
+                      shortformat(abs(imag(z))),"im")
     end
 end
 
@@ -149,15 +150,15 @@ function show(io::IO,CM::Union{ConformalMap,InverseConformalMap})
         print(io,"InverseConformalMap{")
     end
     print(io,typeof(CM).parameters[1])
-    print(io,"}([")
-    print(io,shortformat(CM.domain[1]))
-    print(io,",")
-    print(io,shortformat(CM.domain[2]))
-    print(io,",...,")
-    print(io,shortformat(CM.domain[end-1]))
-    print(io,",")
-    print(io,shortformat(CM.domain[end]))
-    print(io,"],center=")
+    print(io,"}(\n")
+    print(io," "^3,"[",shortformat(CM.domain[1]))
+    print(io,",\n")
+    print(io," "^4*shortformat(CM.domain[2]))
+    print(io,",\n"," "^4,"⋮\n")
+    print(io," "^4*shortformat(CM.domain[end-1]))
+    print(io,",\n")
+    print(io," "^4*shortformat(CM.domain[end]))
+    print(io,"],\n"," "^4,"center=")
     print(io,shortformat(CM.center))
     print(io,")")
 end
@@ -204,17 +205,17 @@ function finv{T<:AbstractFloat}(w::Union{T,Complex{T}},
     end
 end
 
-function fcompose{T<:AbstractFloat}(A::Array{Complex{T},1},
-                                    z::Union{AbstractFloat,Complex})
-    for i=1:length(A)
+function fcompose(A::Array{<:Complex,1},
+                  z::Union{Real,Complex})
+    for i = 1:length(A)
         z = f(z,A[i])
     end
     return z
 end
 
-function finvcompose{T<:AbstractFloat}(A::Array{Complex{T},1},
-                                       w::Union{T,Complex{T}})
-    for i=length(A):-1:1
+function finvcompose(A::Array{<:Complex,1},
+                     w::Union{Real,Complex})
+    for i = length(A):-1:1
         w = finv(w,A[i])
     end
     return w
@@ -222,9 +223,9 @@ end
 
 # The first and last maps (phi2 and philast) in Figure 3 in [MR06] have special forms
 
-function phi2(z::Union{Complex,AbstractFloat},
-              point1::Union{Complex,AbstractFloat},
-              point2::Union{Complex,AbstractFloat})
+function phi2(z::Union{Real,Complex},
+              point1::Union{Real,Complex},
+              point2::Union{Real,Complex})
     if z == point1
         return convert(typeof(z),NaN)
     else
@@ -232,20 +233,20 @@ function phi2(z::Union{Complex,AbstractFloat},
     end
 end
 
-phi2inv(w::Union{Complex,AbstractFloat},
-        point1::Union{Complex,AbstractFloat},
-        point2::Union{Complex,AbstractFloat}) = (w^2*point1-point2)/(w^2-1.0)
-philast(z::Union{Complex,AbstractFloat},
-        ζlast::Union{Complex,AbstractFloat}) = -(z/(1-z/(ζlast)))^2
-philastinv(w::Union{Complex,AbstractFloat},
-           ζlast::Union{Complex,AbstractFloat}) = (w*ζlast+im*sqrt(w)*ζlast^2)/(w+ζlast^2)
+phi2inv(w::Union{Real,Complex},
+        point1::Union{Real,Complex},
+        point2::Union{Real,Complex}) = (w^2*point1-point2)/(w^2-1.0)
+philast(z::Union{Real,Complex},
+        ζlast::Union{Real,Complex}) = -(z/(1-z/(ζlast)))^2
+philastinv(w::Union{Real,Complex},
+           ζlast::Union{Real,Complex}) = (w*ζlast+im*sqrt(w)*ζlast^2)/(w+ζlast^2)
 
 # Explicit conformal maps between the upper half H and the disk D
-H_to_D(z::Union{Complex,AbstractFloat},
-       a::Union{Complex,AbstractFloat}) = (z-a)/(z-conj(a))
+H_to_D(z::Union{Real,Complex},
+       a::Union{Real,Complex}) = (z-a)/(z-conj(a))
 
-D_to_H(w::Union{Complex,AbstractFloat},
-       a::Union{Complex,AbstractFloat}) = (w*conj(a)-a)/(w-1);
+D_to_H(w::Union{Real,Complex},
+       a::Union{Real,Complex}) = (w*conj(a)-a)/(w-1);
 #-----------------------------------------------------------------------------
 
 
@@ -254,36 +255,23 @@ D_to_H(w::Union{Complex,AbstractFloat},
 # GEODESIC ALGORITHM CONFORMAL MAPS
 #-----------------------------------------------------------------------------
 
-# This function adds additional points along the segments defining 
-# the boundary of the domain
-function densify{T<:AbstractFloat}(A::Array{T,2},n::Integer)
-    if n == 1
-        return A
-    end
-    densearray = zeros(typeof(A[1,1]),n*size(A)[1],2)
-    for j=1:size(A)[1]-1
-        for k=1:n
-            densearray[(j-1)*n+k,:] = (n+1-k)/(n)*A[j,:] + (k-1)/(n)*A[j+1,:]
-        end
-    end
-    for k=1:n
-        densearray[(size(A)[1]-1)*n+k,:] = (n+1-k)/(n)*A[size(A)[1],:] + (k-1)/(n)*A[1,:]
-    end
-    return densearray
+"""
+Inserts additional points along each segment of the polygonal domain boundary
+"""
+function densify(A::Array{<:Real,2},n::Integer)
+    return densify(A[:,1] + im*A[:,2],n)
 end
 
-function densify{T<:AbstractFloat}(A::Array{Complex{T},1},n::Integer)
-    if n == 1
-        return A
-    end
-    densearray = zeros(typeof(A[1]),n*length(A))
+function densify(A::Array{<:Complex,1},n::Integer)
+    if n == 1 return A end
+    densearray = zeros(float(eltype(A)),n*length(A))
     for j = 1:length(A)-1
         for k = 1:n
             densearray[(j-1)*n+k] = (n+1-k)/n * A[j] + (k-1)/n * A[j+1]
         end
     end
     for k=1:n
-        densearray[(length(A)-1)*n+k] = (n+1-k)/(n)*A[length(A)] + (k-1)/(n)*A[1]
+        densearray[(length(A)-1)*n+k] = (n+1-k)/n*A[length(A)] + (k-1)/n*A[1]
     end
     return densearray
 end
@@ -423,213 +411,9 @@ function φlastinv(w::Union{Real,Complex},lastpt::Union{Real,Complex},α::Real)
     return v / (exp(-im*(π-α)) + v/lastpt)
 end
 
-#-----------------------------------------------------------------------------
-# FUNCTIONS FOR DISPLAY SUPPORT  
-#-----------------------------------------------------------------------------
-
-function closepath{T<:AbstractFloat}(γ::Array{Complex{T},1})
-    return closepath(hcat([real(a) for a in γ], [imag(a) for a in γ]))
+Requires.@require Graphics2D begin
+    export visualize
+    include("visualization.jl")
 end
-
-function closepath{T<:Real}(γ::Array{Complex{T},1})
-    return closepath(float(γ))
-end
-
-function closepath{T<:AbstractFloat}(γ::Array{T,2})
-    if γ[end,:] == γ[1,:]
-        return γ
-    else
-        return vcat(γ,γ[1,:]')
-    end
-end
-
-function closepath{T<:Real}(γ::Array{T,2})
-    return closepath(float(γ))
-end
-
-function plotgrid(zvals;color1="blue",color2="red",args...)
-    lines = Graphics2D.Line[]
-    for i=1:size(zvals)[1]
-        push!(lines,Graphics2D.Line(hcat(real(zvals[i,:])',imag(zvals[i,:])');color=color1,args...))
-    end
-    for j=1:size(zvals)[2]
-        push!(lines,Graphics2D.Line(hcat(real(zvals[:,j]),imag(zvals[:,j]));color=color2,args...))
-    end
-    return lines
-end
-
-function hyperbolictiling(f::Function;
-                          rings::Integer=9,
-                          rays::Integer=16,
-                          rotation::Real=0.0,
-                          innerradius::Real=1.0/3.0,
-                          ringcolor="blue",
-                          raycolor="red")
-    points = Array{Complex64,1}[[f((1-(1-innerradius)/2^(k-1))*cos(θ+rotation) + 
-                                   im*(1-(1-innerradius)/2^(k-1))*sin(θ+rotation)) 
-                                 for θ=linspace(0,2π,1+rays*2^(k-1))] for k=1:rings]
-    return [vcat([[Graphics2D.Line([points[i][k],points[i][k+1]];
-                color=ringcolor,linewidth=1-i/(rings+4)) 
-            for k=1:length(points[i])-1] 
-            for i=1:length(points)]...);
-            vcat([[Graphics2D.Line([points[i][k],points[i+1][2*k-1]];
-                color=raycolor,linewidth=1-i/(rings+4)) 
-            for k=1:length(points[i])-1] 
-            for i=1:length(points)-1]...)]
-end
-
-function distance{T<:AbstractFloat}(p::Tuple{T,T},q::Array{T,2},r::Array{T,2})
-    if r[1] == q[1]
-        if min(r[2],q[2]) < p[2] < max(r[2],q[2])
-            return abs(p[1]-r[1])
-        else
-            return min(hypot(p[1]-q[1],p[2]-q[2]),hypot(p[1]-r[1],p[2]-r[2]))
-        end
-    else
-        m = (r[2]-q[2])/(r[1]-q[1])
-        x = (q[1]*m^2 - q[2]*m + p[2]*m + p[1])/(m^2+1)
-        y = (p[2]*m^2 - q[1]*m + p[1]*m + q[2])/(m^2+1)
-        if min(r[1],q[1]) < x < max(r[1],q[1])
-            return hypot(p[1]-x,p[2]-y)
-        else
-            return min(hypot(p[1]-q[1],p[2]-q[2]),hypot(p[1]-r[1],p[2]-r[2]))
-        end
-    end
-end
-
-function distance{T<:AbstractFloat}(p::Tuple{T,T},gamma::Array{T,2})
-    m = hypot(p[1]-gamma[1,1],p[2]-gamma[1,2])
-    for i=1:size(gamma)[1]-1
-        d = distance(p,gamma[i,:],gamma[i+1,:])
-        if d < m
-            m = d
-        end
-    end
-    return m
-end
-
-function inside{T<:AbstractFloat}(p::Tuple{T,T},gamma::Array{T,2},tol::Float64=1e-8)
-    if gamma[1,:] != gamma[length(gamma[:,1]),:] 
-        return false
-    end
-    if distance(p,gamma) < 1e-3
-        return false
-    end
-    cntr = 0; m = sqrt(2); # the slope is an arbitrary irrational number
-    for i=1:length(gamma[:,1])-1
-        (x1,y1,x2,y2) = (gamma[i,1],gamma[i,2],gamma[i+1,1],gamma[i+1,2])
-        if ((y2 - p[2] - m*(x2-p[1]))*(y1 - p[2] - m*(x1-p[1])) < 0) 
-            if (m*p[1]*x1 - p[2]*x1 - m*p[1]*x2 + p[2]*x2 - x2*y1 + x1*y2)/(m*x1 - m*x2 - y1 + y2)  - p[1] > 0
-                cntr += 1
-            end
-        end
-    end
-    return isodd(cntr)    
-end
-
-inside{T<:AbstractFloat}(p::Tuple{T,T},gamma::Array{Complex{T},1},tol::Float64=1e-8) = 
-    inside(p,hcat(reim(gamma)...),tol)
-
-function intersect{T<:AbstractFloat}(p::Tuple{T,T},q::Tuple{T,T},r::Tuple{T,T},s::Tuple{T,T})
-    a = -((p[2]*(r[1] - s[1]) + r[2]*s[1] - r[1]*s[2] + 
-          p[1]*(-r[2] + s[2]))/((-p[2] + q[2])*(r[1] - s[1]) + (p[1] - 
-                 q[1])*(r[2] - s[2])))
-    b = (-q[2]*r[1] + p[2]*(-q[1] + r[1]) + p[1]*(q[2] - r[2]) + 
-         q[1]*r[2])/((p[2] - q[2])*(r[1] - s[1]) - (p[1] - q[1])*(r[2] - s[2]))
-    return 0 <= a <= 1 && 0 <= b <= 1
-end
-
-function intersect{T<:AbstractFloat}(p::Complex{T},q::Complex{T},r::Complex{T},s::Complex{T})
-    # Determines whether the segment from p to q intersects the 
-    # segment from r to s
-    p,q,r,s = map(reim,(p,q,r,s))
-    return intersect(p,q,r,s)
-end
-
-function intersect{T<:AbstractFloat}(p::Complex{T},q::Complex{T},gamma::Array{Complex{T},1})
-    for i=1:length(gamma)-1
-        if intersect(p,q,gamma[i],gamma[i+1])
-            return true
-        end
-    end
-    return false
-end
-
-function intersect{T<:AbstractFloat}(p::Tuple{T,T},q::Tuple{T,T},gamma::Array{T,2})
-    for i=1:size(gamma)[1]-1
-        if intersect(p,q,(gamma[i,1],gamma[i,2]),(gamma[i+1,1],gamma[i+1,2]))
-            return true
-        end
-    end
-    return false
-end
-
-function domain(f::Union{ConformalMap,InverseConformalMap})
-    return Graphics2D.GraphicElement[Graphics2D.Point(f.center),
-                                     Graphics2D.Line(closepath(f.domain))]
-end
-
-function makegrid{T<:AbstractFloat}(boundary::Array{T,2},n::Integer)
-    grid = Tuple{T,T}[]
-    xvals = boundary[:,1]
-    yvals = boundary[:,2]
-    ϵ = max(maximum(xvals)-minimum(xvals),maximum(yvals)-minimum(yvals))/(n-1)
-    m = length(minimum(xvals):ϵ:maximum(xvals))
-    n = length(minimum(yvals):ϵ:maximum(yvals))
-    totalgrid = [(x,y) for 
-        x = linspace(minimum(xvals),maximum(xvals),m),
-        y = linspace(minimum(yvals),maximum(yvals),n)]
-    pointsinside = zeros(Int64,m,n)
-    for i=1:m
-        for j=1:n
-            if inside(totalgrid[i,j],boundary)
-                pointsinside[i,j] = 1
-            end
-        end
-    end
-    lines = Tuple{Tuple{Int64,Int64},Tuple{Int64,Int64}}[]
-    for i=1:m
-        for j=1:n 
-            for v in [(i+1,j),(i-1,j),(i,j+1),(i,j-1)]
-                if 1 <= v[1] <= m && 1 <= v[2] <= n && 
-                    pointsinside[i,j] == 1 && pointsinside[v...] == 1 && 
-                       ~intersect(totalgrid[i,j],totalgrid[v...],boundary)
-                    push!(lines,((i,j),v))
-                end
-            end
-        end
-    end
-    return totalgrid, pointsinside, lines
-end
-
-makegrid{T<:Complex}(boundary::Array{T,1},n::Integer) = 
-    makegrid(hcat(reim(boundary)...),n)
-
-function showgrid(domain,totalgrid,pointsinside,lines,center)
-    return [[Graphics2D.Point(real(center),imag(center)),
-    Graphics2D.Line(closepath(domain))];
-    [Graphics2D.Line([totalgrid[line[1]...],
-    totalgrid[line[2]...]],linewidth=0.2) for line in lines]] 
-end
-
-function showgridimage(f,totalgrid,pointsinside,lines,center)
-    return [[Graphics2D.Point(0.0,0.0),Graphics2D.Circle([0.0,0.0],1)];
-     [Graphics2D.Line([f(totalgrid[line[1]...]),
-                       f(totalgrid[line[2]...])],linewidth=0.1) for line in lines]] 
-end
-
-function visualize(CM::ConformalMap,n::Integer=40)
-    totalgrid,pointsinside,lines = makegrid(closepath(CM.domain),n)
-    return (showgrid(closepath(CM.domain),totalgrid,pointsinside,lines,CM.center), 
-    showgridimage(p->CM(p[1] + im*p[2]),totalgrid,pointsinside,lines,CM.center))
-end
-
-function visualize(ICM::InverseConformalMap;kwargs...)
-    return (hyperbolictiling(z->z;kwargs...),hyperbolictiling(z->ICM(z);kwargs...))
-end
-
-
-#-----------------------------------------------------------------------------
-
 
 end # module
