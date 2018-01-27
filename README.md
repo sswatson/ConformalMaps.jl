@@ -26,7 +26,7 @@ f = ConformalMap(vertices,0.0;resolution=100)
 
 `f` supports function call syntax: `f(0.1im)`
 
-The inverse of `f` is obtained as `inv(g)` and is of type
+The inverse of `f` is obtained as `inv(f)` and is of type
 `InverseConformalMap`. 
 
 If [`Graphics2D`](https://github.com/sswatson/Graphics2D.jl) is installed,
@@ -36,7 +36,7 @@ an `InverseConformalMap`) or grid lines (if called on a `ConformalMap`).
 
 ```julia
 g = inv(f)
-showgraphics([visualize(g;rays=24,rings=12,innerradius=0.2)[2];domain(f)])
+show([visualize(g;rays=24,rings=12,innerradius=0.2).range;domain(f)])
 ```
 
 ![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
