@@ -38,11 +38,9 @@ lines (if called on a `ConformalMap`).
 ```julia
 g = inv(f)
 visualize(g) 
-
-![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.svg)
 ```
 
-![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
+![Conformal map](images/square.svg)
 
 `visualize` returns a `ConformalMapVisualization` object, whose
 fields `domain` and `range` contain `AsyPlots.Plot2D` objects. 
