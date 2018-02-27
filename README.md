@@ -10,18 +10,19 @@ The domain (approximated by a polygon) is specified as an array which lists
 the vertices of the domain in counterclockwise order. A conformal
 map from `domain` to the unit disk which maps `center` to the origin
 is initialized as `ConformalMap(domain,center)`. The keyword argument
-`resolution=n` inserts `n` equally spaced points along each side of
-the polygon. Higher values of `n` give greater accuracy but require
-longer to compute. 
+`pointspacing=ϵ` inserts equally spaced points along each side of
+the polygon so that the spacing between consecutive points is
+everywhere less than `ϵ`. Smaller values of `ϵ` give greater accuracy
+but require longer to compute. The default value is 1% of the diameter
+of the domain. 
 
 ```julia
-using Graphics2D
-using ConformalMaps
+using AsyPlots, ConformalMaps
 vertices = [1.0  0.0;
             0.0  1.0;
            -1.0  0.0;
             0.0 -1.0]
-f = ConformalMap(vertices,0.0;resolution=100)
+f = ConformalMap(vertices,0.0)
 ```
 
 `f` supports function call syntax: `f(0.1im)`
@@ -29,16 +30,22 @@ f = ConformalMap(vertices,0.0;resolution=100)
 The inverse of `f` is obtained as `inv(f)` and is of type
 `InverseConformalMap`. 
 
-If [`Graphics2D`](https://github.com/sswatson/Graphics2D.jl) is installed,
-then `visualize` may be used to display the images of certain polar
-coordinate level lines under the inverse conformal map (if called on
-an `InverseConformalMap`) or grid lines (if called on a `ConformalMap`). 
+If [`AsyPlots`](https://github.com/sswatson/AsyPlots.jl) is installed,
+then `visualize` may be used to display the images of a hyperbolic
+tiling of the disk (if called on an `InverseConformalMap`) or grid
+lines (if called on a `ConformalMap`).
 
 ```julia
 g = inv(f)
-show([visualize(g;rays=24,rings=12,innerradius=0.2).range;domain(f)])
+visualize(g) 
+
+![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.svg)
 ```
 
 ![Conformal map](https://github.com/sswatson/ConformalMaps.jl/blob/master/images/square.png)
+
+`visualize` returns a `ConformalMapVisualization` object, whose
+fields `domain` and `range` contain `AsyPlots.Plot2D` objects. 
+`combine` returns a single plot with the domain and the range
 
 [![Build Status](https://travis-ci.org/sswatson/ConformalMaps.jl.svg?branch=master)](https://travis-ci.org/sswatson/ConformalMaps.jl)

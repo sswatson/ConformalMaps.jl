@@ -1,37 +1,26 @@
+__precompile__(true) 
+
 module ConformalMaps
 
-# This package provides a ConfomalMap type which numerically approximates the 
+# This package provides a ConfomalMap type which numerically approximates the
 # conformal map from a Jordan domain specified by a list of points on the
-# boundary to a disk or half-plane. 
+# boundary to a disk or half-plane.
 
-# The algorithm used is based on the paper Convergence of the Zipper algorithm 
+# The algorithm used is based on the paper Convergence of the Zipper algorithm
 # for conformal mapping by Don Marshall and Steffen Rohde. The function names
-# in this module are modeled after the notation in the paper. 
+# in this module are modeled after the notation in the paper.
 # http://arxiv.org/abs/math/0605532
 
 #-----------------------------------------------------------------------------
-# BASIC USAGE 
-#-----------------------------------------------------------------------------
 
-## Computing the list of points ζ can take a long time for a complicated domain
-# f = ConformalMap(Float64[1 0; 0 1; -1 0; 0 -1];resolution=100)
-
-## ConformalMap objects support function call notation
-# f(0.6+0.7im)
-
-## The inverse of a ConformalMap is an InverseConformalMap
-# g = inv(f)
-
-#-----------------------------------------------------------------------------
-
-import Requires, 
+import Requires,
        Base.show,
        Base.inv
 
 export ConformalMap,
-       InverseConformalMap, 
+       InverseConformalMap,
        domain
-    
+
 #-----------------------------------------------------------------------------
 # Conformal Map Types
 #-----------------------------------------------------------------------------
@@ -43,16 +32,19 @@ immutable ConformalMap{T<:Real} # A map from the domain to the disk
 end
 
 immutable InverseConformalMap{T<:Real} # A map from the disk to the domain
-    domain::Array{Complex{T},1} 
-    data::Array{Complex{T},1} 
-    center::Complex{T} 
+    domain::Array{Complex{T},1}
+    data::Array{Complex{T},1}
+    center::Complex{T}
 end
 
 function ConformalMap(domain::Array{<:Complex,1},
                       center::Complex;
-                      resolution::Integer=1)
+                      pointspacing::Real=diameter(domain)/250)
 
-    densepoints = densify(domain,resolution)
+    if domain[1] ≈ domain[end] 
+        pop!(domain) 
+    end
+    densepoints = densify(domain,pointspacing)
 
     T = float(real(eltype(densepoints)))
 
@@ -89,7 +81,7 @@ function ConformalMap(domain::Array{Tuple{<:Real,<:Real},1},
                       center::Union{Real,Complex};
                       kwargs...)
     complexdomain = [a for (a,b) in domain] + im*[b for (a,b) in domain]
-    return ConformalMap(complexdomain,center;kwargs...) 
+    return ConformalMap(complexdomain,center;kwargs...)
 end
 
 function InverseConformalMap{T<:Real}(domain::Array{Complex{T},1},
@@ -168,8 +160,8 @@ end
 #-----------------------------------------------------------------------------
 # COMPLEX NUMBER CONVERSION
 #-----------------------------------------------------------------------------
-# for conveniently splitting complex numbers and arrays of them into 
-# real and imaginary parts 
+# for conveniently splitting complex numbers and arrays of them into
+# real and imaginary parts
 realify{T<:Complex}(A::Array{T,1}) = hcat(real(A),imag(A))
 realify{T<:AbstractFloat}(z::Complex{T}) = (real(z),imag(z))
 realify(x::Real) = (x,0.0)
@@ -178,8 +170,8 @@ realify(x::Real) = (x,0.0)
 #-----------------------------------------------------------------------------
 # EXPLICIT CONFORMAL MAPS
 #-----------------------------------------------------------------------------
-# f and finv are the basic slit-domain conformal maps composed to 
-# construct the global conformal map 
+# f and finv are the basic slit-domain conformal maps composed to
+# construct the global conformal map
 function f{T<:AbstractFloat}(z::Union{T,Complex{T}},
                              a::Union{T,Complex{T}};
                              tol::Float64=1e-12)
@@ -200,7 +192,7 @@ function finv{T<:AbstractFloat}(w::Union{T,Complex{T}},
     elseif isnan(w)
         return im*abs(a)^2/imag(a)
     else
-        return abs(a)^2/imag(a)*sqrt(w^2+(abs(a)^2/real(a))^2) / 
+        return abs(a)^2/imag(a)*sqrt(w^2+(abs(a)^2/real(a))^2) /
                (abs(a)^2/imag(a)-im*sqrt(w^2+(abs(a)^2/real(a))^2))
     end
 end
@@ -256,24 +248,31 @@ D_to_H(w::Union{Real,Complex},
 #-----------------------------------------------------------------------------
 
 """
-Inserts additional points along each segment of the polygonal domain boundary
+Insert additional points along each segment of the polygonal domain boundary
 """
-function densify(A::Array{<:Real,2},n::Integer)
-    return densify(A[:,1] + im*A[:,2],n)
-end
-
-function densify(A::Array{<:Complex,1},n::Integer)
-    if n == 1 return A end
-    densearray = zeros(float(eltype(A)),n*length(A))
-    for j = 1:length(A)-1
-        for k = 1:n
-            densearray[(j-1)*n+k] = (n+1-k)/n * A[j] + (k-1)/n * A[j+1]
+function densify(A::Array{<:Complex,1},pointspacing::Real)
+    densearray = float(eltype(A))[]
+    L = length(A)
+    for j = 1:length(A)
+        n = ceil(Integer,abs(A[mod1(j,L)]-A[mod1(j+1,L)])/pointspacing)
+        for k=1:n
+            push!(densearray,(n+1-k)/n * A[mod1(j,L)] + (k-1)/n * A[mod1(j+1,L)])
         end
     end
-    for k=1:n
-        densearray[(length(A)-1)*n+k] = (n+1-k)/n*A[length(A)] + (k-1)/n*A[1]
-    end
     return densearray
+end
+
+"""
+Return the largest distance between any pair of points in `points` 
+"""
+function diameter(points)
+    m = 0.0
+    for p in points
+        for q in points
+            m = max(m,hypot(p,q))         
+        end
+    end
+    return m
 end
 
 #-----------------------------------------------------------------------------
@@ -304,7 +303,7 @@ function newton(f::Function,
         xnew = reflect(xnew)
         cntr += 1
         if cntr > maxiter
-            return xnew # error("Maximum iterations reached in Newton's method: $xnew") 
+            return xnew # error("Maximum iterations reached in Newton's method: $xnew")
         end
     end
     return xnew
@@ -317,7 +316,7 @@ end
 
 function fzip_pr(d::Complex,z::Union{Real,Complex})
     p = angle(d)/π
-    return abs(d)/(p^p*(1-p)^(1-p)) * 
+    return abs(d)/(p^p*(1-p)^(1-p)) *
     p*(z-p)^(p-1)*(1-p+z)^(1-p) + (1-p)*(z-p)^p*(1-p+z)^(-p)
 end
 
@@ -326,7 +325,7 @@ function fzipinv(a::Complex,w::Union{Real,Complex};args...)
     d = exp(im*p*π)*p^p*(1-p)^(1-p)
     v = complex(w / (abs(a)/(p^p*(1-p)^(1-p))))
     if abs(v) > 9/8 * abs(d)
-        return newton(z->fzip(d,z)-v,z->fzip_pr(d,z), v + 2p - 1 + p*(1-p)/(2*v) + 
+        return newton(z->fzip(d,z)-v,z->fzip_pr(d,z), v + 2p - 1 + p*(1-p)/(2*v) +
                                 (1 - 2p)*p*(1-p)/(3*v*v);args...)
     elseif abs(v - d) < 0.25 * imag(d)
         k(z) = im*sqrt((z-d)*exp(-im*p*π))
@@ -337,7 +336,7 @@ function fzipinv(a::Complex,w::Union{Real,Complex};args...)
         kof_prime(z) = (z-p)*(1/p-1)*(z-(p-1))^(1/p-2) + (z-(p-1))^(1/p-1)
         u = v^(1/p)
         return newton(z->kofzip(z)-u,kof_prime,p+u;args...)
-    else 
+    else
         kofzip2(z) = exp(-im*p/(1-p)*π)*(z-p)^(p/(1-p))*(z-(p-1))
         kof_prime2(z) = exp(-im*p/(1-p)*π)*(p/(1-p)*(z-p)^(p/(1-p)-1)*(z-(p-1)) + (z-p)^(p/(1-p)))
         u = exp(-im*p/(1-p)*π)*v^(1/(1-p))
@@ -347,7 +346,7 @@ end
 
 function h(z::Union{Real,Complex},c::Complex,a::Complex;args...)
     if imag(z) < 0.0
-        error("h(z) is defined only for z in the upper half plane") 
+        error("h(z) is defined only for z in the upper half plane")
     end
     p,q = reim(c)
     r,s = reim(a)
@@ -393,17 +392,17 @@ end
 function φ1inv(w::Union{Real,Complex},
         z0::Union{Real,Complex},
         z1::Union{Real,Complex},
-        z2::Union{Real,Complex}) 
+        z2::Union{Real,Complex})
     wsq = w*w
     return (wsq*z0*z1 + z0*z2 - wsq*z0*z2 - z1*z2)/(z0 - z1 + wsq*z1 - wsq*z2)
 end
 
-function α(z,x) 
+function α(z,x)
     return π/2 + angle(abs(x/2) + im*(imag(z)/2+real(z)*(real(z)-x)/(2*imag(z))))
 end
 
 function φlast(z::Union{Real,Complex},lastpt::Real,α::Real)
-    return (exp(-im*(π-α))*z/(1-z/lastpt))^(π/α) 
+    return (exp(-im*(π-α))*z/(1-z/lastpt))^(π/α)
 end
 
 function φlastinv(w::Union{Real,Complex},lastpt::Union{Real,Complex},α::Real)
@@ -411,8 +410,9 @@ function φlastinv(w::Union{Real,Complex},lastpt::Union{Real,Complex},α::Real)
     return v / (exp(-im*(π-α)) + v/lastpt)
 end
 
-Requires.@require Graphics2D begin
+Requires.@require AsyPlots begin
     export visualize
+    export combine
     include("visualization.jl")
 end
 
