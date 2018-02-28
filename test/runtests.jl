@@ -8,7 +8,6 @@ vertices = [1.0  0.0;
             0.0 -1.0]
 f = ConformalMap(vertices,0.0)
 @test f(0.0) == 0
-@test abs(f(0.1) - (0.13109886582707742 + 6.127351451661506e-6im)) < 1e-3 d
 
 vertices = [1, im, -1, -im] 
 f = ConformalMap(vertices,0.0im)
