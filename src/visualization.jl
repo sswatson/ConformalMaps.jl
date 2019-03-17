@@ -2,7 +2,7 @@
 using AsyPlots
 using ConformalMaps
 
-immutable ConformalMapVisualization
+struct ConformalMapVisualization
     domain::AsyPlots.Plot2D
     range::AsyPlots.Plot2D
 end
@@ -147,7 +147,7 @@ function makegrid(boundary::Array{AsyPlots.Vec2,1},n::Integer)
     return totalgrid, pointsinside, lines
 end
 
-makegrid{T<:Complex}(boundary::Array{T,1},n::Integer) =
+makegrid(boundary::Array{T,1},n::Integer) where {T<:Complex} =
     makegrid(hcat(reim(boundary)...),n)
 
 function grid(domain,totalgrid,pointsinside,lines,center)
