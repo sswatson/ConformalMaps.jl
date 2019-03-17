@@ -1,5 +1,5 @@
 module ConformalMaps
-
+using Printf
 # This package provides a ConfomalMap type which numerically approximates the
 # conformal map from a Jordan domain specified by a list of points on the
 # boundary to a disk or half-plane.
