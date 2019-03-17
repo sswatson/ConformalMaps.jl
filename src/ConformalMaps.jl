@@ -1,5 +1,3 @@
-__precompile__(true) 
-
 module ConformalMaps
 
 # This package provides a ConfomalMap type which numerically approximates the

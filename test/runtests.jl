@@ -1,5 +1,5 @@
 using ConformalMaps
-using Base.Test
+using Test
 using Requires 
 
 vertices = [1.0  0.0;
