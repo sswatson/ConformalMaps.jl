@@ -408,7 +408,7 @@ function φlastinv(w::Union{Real,Complex},lastpt::Union{Real,Complex},α::Real)
     return v / (exp(-im*(π-α)) + v/lastpt)
 end
 
-Requires.@require AsyPlots begin
+Requires.@require AsyPlots="77e5a97a-5ef9-58df-9d21-21957d92d960" begin
     export visualize
     export combine
     include("visualization.jl")
