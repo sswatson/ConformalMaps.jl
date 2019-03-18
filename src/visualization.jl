@@ -2,7 +2,7 @@
 using AsyPlots
 using ConformalMaps
 
-immutable ConformalMapVisualization
+struct ConformalMapVisualization
     domain::AsyPlots.Plot2D
     range::AsyPlots.Plot2D
 end
@@ -53,11 +53,11 @@ function hyperbolictiling(f::Union{Function,InverseConformalMap};
     
    points = [[f((1-(1-innerradius)/2^(k-1))*cos(θ+rotation) +
                   im*(1-(1-innerradius)/2^(k-1))*sin(θ+rotation))
-                       for θ=linspace(0,2π,1+rays*2^(k-1))] for k=1:rings]
+                       for θ=range(0, stop=2π, length=1+rays*2^(k-1))] for k=1:rings]
    return Plot([
             (isa(f,InverseConformalMap) ? domain(f) :
              [Point2D(f(0.0),linewidth=2),
-              Polygon2D([f(cis(θ)) for θ=linspace(0,2π,250)];linewidth=0.3)]);
+              Polygon2D([f(cis(θ)) for θ=range(0, stop=2π, length=250)];linewidth=0.3)]);
              [Path2D([points[i][k],points[i+1][2*k-1]];
                      color=raycolor,linewidth=lwfunction(i))
                           for i=1:length(points)-1 for k=1:length(points[i])-1]
@@ -126,8 +126,8 @@ function makegrid(boundary::Array{AsyPlots.Vec2,1},n::Integer)
     m = length(minimum(xvals):ϵ:maximum(xvals))
     n = length(minimum(yvals):ϵ:maximum(yvals))
     totalgrid = [(x,y) for
-        x = linspace(minimum(xvals),maximum(xvals),m),
-        y = linspace(minimum(yvals),maximum(yvals),n)]
+        x = range(minimum(xvals), stop=maximum(xvals), length=m),
+        y = range(minimum(yvals), stop=maximum(yvals), length=n)]
     pointsinside = [iswellinside(AsyPlots.Vec2(totalgrid[i,j]),
                                 boundary;epsilon=1e-3) ? 1 : 0 for i=1:m,j=1:n]
     lines = Tuple{Tuple{Int64,Int64},Tuple{Int64,Int64}}[]
@@ -147,7 +147,7 @@ function makegrid(boundary::Array{AsyPlots.Vec2,1},n::Integer)
     return totalgrid, pointsinside, lines
 end
 
-makegrid{T<:Complex}(boundary::Array{T,1},n::Integer) =
+makegrid(boundary::Array{T,1},n::Integer) where {T<:Complex} =
     makegrid(hcat(reim(boundary)...),n)
 
 function grid(domain,totalgrid,pointsinside,lines,center)

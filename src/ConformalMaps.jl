@@ -1,7 +1,5 @@
-__precompile__(true) 
-
 module ConformalMaps
-
+using Printf
 # This package provides a ConfomalMap type which numerically approximates the
 # conformal map from a Jordan domain specified by a list of points on the
 # boundary to a disk or half-plane.
@@ -25,13 +23,13 @@ export ConformalMap,
 # Conformal Map Types
 #-----------------------------------------------------------------------------
 
-immutable ConformalMap{T<:Real} # A map from the domain to the disk
+struct ConformalMap{T<:Real} # A map from the domain to the disk
     domain::Array{Complex{T},1} # Points tracing out the boundary
     data::Array{Complex{T},1} # An array (ζ in the paper) encoding the conformal map
     center::Complex{T} # The point in the domain which maps to the origin
 end
 
-immutable InverseConformalMap{T<:Real} # A map from the disk to the domain
+struct InverseConformalMap{T<:Real} # A map from the disk to the domain
     domain::Array{Complex{T},1}
     data::Array{Complex{T},1}
     center::Complex{T}
@@ -84,8 +82,8 @@ function ConformalMap(domain::Array{Tuple{<:Real,<:Real},1},
     return ConformalMap(complexdomain,center;kwargs...)
 end
 
-function InverseConformalMap{T<:Real}(domain::Array{Complex{T},1},
-                       center::Complex{T};kwargs...)
+function InverseConformalMap(domain::Array{Complex{T},1},
+                       center::Complex{T};kwargs...) where T<:Real
     return inv(ConformalMap(domain,center;kwargs...))
 end
 
@@ -162,8 +160,8 @@ end
 #-----------------------------------------------------------------------------
 # for conveniently splitting complex numbers and arrays of them into
 # real and imaginary parts
-realify{T<:Complex}(A::Array{T,1}) = hcat(real(A),imag(A))
-realify{T<:AbstractFloat}(z::Complex{T}) = (real(z),imag(z))
+realify(A::Array{T,1}) where {T<:Complex} = hcat(real(A),imag(A))
+realify(z::Complex{T}) where {T<:AbstractFloat} = (real(z),imag(z))
 realify(x::Real) = (x,0.0)
 #-----------------------------------------------------------------------------
 
@@ -172,9 +170,9 @@ realify(x::Real) = (x,0.0)
 #-----------------------------------------------------------------------------
 # f and finv are the basic slit-domain conformal maps composed to
 # construct the global conformal map
-function f{T<:AbstractFloat}(z::Union{T,Complex{T}},
-                             a::Union{T,Complex{T}};
-                             tol::Float64=1e-12)
+function f(z::Union{T,Complex{T}},
+           a::Union{T,Complex{T}};
+           tol::Float64=1e-12) where T<:AbstractFloat
     if isnan(z)
         return -im*sign(imag(a))*abs(a)^2*sqrt(1/real(a)^2+1/imag(a)^2)
     elseif abs(imag(a)) < tol
@@ -184,9 +182,9 @@ function f{T<:AbstractFloat}(z::Union{T,Complex{T}},
     end
 end
 
-function finv{T<:AbstractFloat}(w::Union{T,Complex{T}},
-                                a::Union{T,Complex{T}};
-                                tol::Float64=1e-12)
+function finv(w::Union{T,Complex{T}},
+              a::Union{T,Complex{T}};
+              tol::Float64=1e-12) where T<:AbstractFloat
     if abs(imag(a)) < tol
         return sqrt(w^2+a^2)
     elseif isnan(w)
@@ -366,9 +364,9 @@ function hinv(z::Union{Real,Complex},c::Complex,a::Complex;args...)
     return (z->b*z/(b+z))(fzip(d,z))
 end
 
-function hcompose{T<:AbstractFloat}(A::Array{Complex{T},1},
-                                    z::Union{Real,Complex};
-                                    realline::Bool=false)
+function hcompose(A::Array{Complex{T},1},
+                  z::Union{Real,Complex};
+                  realline::Bool=false) where T<:AbstractFloat
     zpr = z
     for i=1:2:length(A)
         realline ? zpr = real(h(zpr,A[i],A[i+1])) : zpr = h(zpr,A[i],A[i+1])
@@ -376,8 +374,8 @@ function hcompose{T<:AbstractFloat}(A::Array{Complex{T},1},
     return zpr
 end
 
-function hinvcompose{T<:AbstractFloat}(A::Array{Complex{T},1},
-                                       w::Union{T,Complex{T}})
+function hinvcompose(A::Array{Complex{T},1},
+                     w::Union{T,Complex{T}}) where T<:AbstractFloat
     for i=length(A)-1:-2:1
         w = hinv(w,A[i],A[i+1])
     end
