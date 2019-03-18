@@ -18,7 +18,7 @@ function closepath(γ::Array{<:Complex,1})
     return closepath(map(AsyPlots.Vec2,γ))
 end
 
-function closepath(γ::Array{AsyPlots.Vec2})
+function closepath(γ::Array{<:AsyPlots.Vec2})
     if γ[1] == γ[end]
         return γ
     else
@@ -114,11 +114,11 @@ end
 
 function intersectQ(p::AsyPlots.Vec2,
                     q::AsyPlots.Vec2,
-                    γ::Array{AsyPlots.Vec2,1})
+                    γ::Array{<:AsyPlots.Vec2,1})
     intersectQ(map(complex,(p,q))...,map(complex,γ))
 end
 
-function makegrid(boundary::Array{AsyPlots.Vec2,1},n::Integer)
+function makegrid(boundary::Array{<:AsyPlots.Vec2,1},n::Integer)
     grid  = Tuple[]
     xvals = [P.x for P in boundary]
     yvals = [P.y for P in boundary]
