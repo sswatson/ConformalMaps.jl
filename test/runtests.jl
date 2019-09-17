@@ -21,7 +21,7 @@ g = inv(f)
 z = 0.1 + 0.1im; 
 @test g(f(z)) ≈ z 
 
-@require AsyPlots begin
+Requires.@require AsyPlots="77e5a97a-5ef9-58df-9d21-21957d92d960" begin
     slitdomain = [0.0, 0.495, 0.5 + 0.25*im, 0.505, 1.0, 1.0 + 1.0*im, im]
     f = ConformalMap(slitdomain,0.5+0.5im;resolution=40)
     g = inv(f)
