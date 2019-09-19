@@ -3,6 +3,9 @@ uuid = "226e0482-2e74-5b70-8460-0a87d2a092cc"
 authors = ["Samuel S. Watson <sswatson@brown.edu>"]
 version = "0.0.3"
 
+[compat]
+julia = "1"
+
 [deps]
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
